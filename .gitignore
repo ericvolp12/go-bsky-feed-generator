@@ -8,6 +8,12 @@
 *.so
 *.dylib
 
+.vscode/
+.env
+
+# Feed Generator Binary
+feedgen
+
 # Test binary, built with `go test -c`
 *.test
 
