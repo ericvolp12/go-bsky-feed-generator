@@ -24,13 +24,13 @@ This service exposes the following routes:
 
 - `/.well-known/did.json`
   - This route is used by ATProto to verify ownership of the DID the service is claiming, it's a static JSON document.
-  - You can see how this is generated in `pkg/feed-generator/endpoints.go:GetWellKnownDID()`
+  - You can see how this is generated in `pkg/gin/endpoints.go:GetWellKnownDID()`
 - `/xrpc/app.bsky.feed.getFeedSkeleton`
   - This route is what clients call to generate a feed page, it includes three query parameters for feed generation: `feed`, `cursor`, and `limit`
-  - You can see how those are parsed and handled in `pkg/feed-generator/endpoints.go:GetFeedSkeleton()`
+  - You can see how those are parsed and handled in `pkg/gin/endpoints.go:GetFeedSkeleton()`
 - `/xrpc/app.bsky.feed.describeFeedGenerator`
   - This route is how the service advertises which feeds it supports to clients.
-  - You can see how those are parsed and handled in `pkg/feed-generator/endpoints.go:DescribeFeedGenerator()`
+  - You can see how those are parsed and handled in `pkg/gin/endpoints.go:DescribeFeedGenerator()`
 
 ## Publishing
 
@@ -42,7 +42,7 @@ Your feed will be published under _your_ DID and should show up in your profile 
 
 This repo is structured to abstract away a `Feed` interface that allows for you to add all sorts of feeds to the generator.
 
-These feeds can be simple static feeds like the `pkg/static-feed/feed.go` implementation, or they can be much more complex feeds that draw on different data sources and filter them in cool ways to produce pages of feed items.
+These feeds can be simple static feeds like the `pkg/feeds/static/feed.go` implementation, or they can be much more complex feeds that draw on different data sources and filter them in cool ways to produce pages of feed items.
 
 The `Feed` interface is defined by any struct implementing two functions:
 
