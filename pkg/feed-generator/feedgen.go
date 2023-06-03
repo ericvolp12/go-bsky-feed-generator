@@ -7,7 +7,7 @@ import (
 )
 
 type Feed interface {
-	GetPage(ctx context.Context, limit int64, cursor string) (feedPosts []*appbsky.FeedDefs_SkeletonFeedPost, newCursor *string, err error)
+	GetPage(ctx context.Context, userDID string, limit int64, cursor string) (feedPosts []*appbsky.FeedDefs_SkeletonFeedPost, newCursor *string, err error)
 	Describe(ctx context.Context) (*appbsky.FeedDescribeFeedGenerator_Feed, error)
 }
 

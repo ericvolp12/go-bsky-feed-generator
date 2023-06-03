@@ -7,8 +7,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
+	auth "github.com/ericvolp12/go-bsky-feed-generator/pkg/auth"
 	feedgenerator "github.com/ericvolp12/go-bsky-feed-generator/pkg/feed-generator"
+
 	staticfeed "github.com/ericvolp12/go-bsky-feed-generator/pkg/static-feed"
 	ginprometheus "github.com/ericvolp12/go-gin-prometheus"
 	"github.com/gin-gonic/gin"
@@ -106,6 +109,20 @@ func main() {
 
 	// Add routes for feed generator
 	router.GET("/.well-known/did.json", feedGenerator.GetWellKnownDID)
+
+	// Plug in Authentication Middleware
+	auther, err := auth.NewAuth(
+		10000,
+		time.Hour*1,
+		"https://plc.directory",
+		5,
+		serviceWebDID,
+	)
+	if err != nil {
+		log.Fatalf("Failed to create Auth: %v", err)
+	}
+
+	router.Use(auther.AuthenticateGinRequestViaJWT)
 	router.GET("/xrpc/app.bsky.feed.getFeedSkeleton", feedGenerator.GetFeedSkeleton)
 	router.GET("/xrpc/app.bsky.feed.describeFeedGenerator", feedGenerator.DescribeFeedGenerator)
 

@@ -22,7 +22,7 @@ func NewStaticFeed(ctx context.Context, feedActorDID string, feedName string, st
 	}
 }
 
-func (sf *StaticFeed) GetPage(ctx context.Context, limit int64, cursor string) ([]*appbsky.FeedDefs_SkeletonFeedPost, *string, error) {
+func (sf *StaticFeed) GetPage(ctx context.Context, userDID string, limit int64, cursor string) ([]*appbsky.FeedDefs_SkeletonFeedPost, *string, error) {
 	cursorAsInt := int64(0)
 	var err error
 

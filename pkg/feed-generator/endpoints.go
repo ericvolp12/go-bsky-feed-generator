@@ -64,6 +64,9 @@ func (fg *FeedGenerator) GetFeedSkeleton(c *gin.Context) {
 	ctx, span := tracer.Start(c.Request.Context(), "FeedGenerator:GetFeedSkeleton")
 	defer span.End()
 
+	// Get userDID from the request context, which is set by the auth middleware
+	userDID := c.GetString("user_did")
+
 	feedQuery := c.Query("feed")
 	if feedQuery == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "feed query parameter is required"})
@@ -132,7 +135,7 @@ func (fg *FeedGenerator) GetFeedSkeleton(c *gin.Context) {
 	}
 
 	// Get the feed items
-	feedItems, newCursor, err := feed.GetPage(ctx, limit, cursor)
+	feedItems, newCursor, err := feed.GetPage(ctx, userDID, limit, cursor)
 	if err != nil {
 		span.RecordError(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to get feed items: %s", err.Error())})
