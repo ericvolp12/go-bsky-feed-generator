@@ -12,6 +12,10 @@ Start up the feed generator by running: `make up`
 
 This will build the feed generator service binary inside a docker container and stand up the service on your machine at port `9032`.
 
+To view a sample static feed (with only one post) go to: [`http://localhost:9032/xrpc/app.bsky.feed.getFeedSkeleton?feed=at://did:plc:replace-me-with-your-did/app.bsky.feed.generator/static`])(http://localhost:9032/xrpc/app.bsky.feed.getFeedSkeleton?feed=at://did:plc:replace-me-with-your-did/app.bsky.feed.generator/static)
+
+Update the variables in `.env` when you actually want to deploy the service somewhere, at which point `did:plc:replace-me-with-your-did` should be replaced with the value of `FEED_ACTOR_DID`.
+
 ## Accessing
 
 This service exposes the following routes:
