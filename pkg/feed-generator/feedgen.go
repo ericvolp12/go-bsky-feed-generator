@@ -14,6 +14,7 @@ type Feed interface {
 type FeedGenerator struct {
 	FeedActorDID          string          // DID of the Repo the Feed is published under
 	ServiceEndpoint       string          // URL of the FeedGenerator service
+	ServiceDID            string          // DID of the FeedGenerator service
 	AcceptableURIPrefixes []string        // URIs that the FeedGenerator is allowed to generate feeds for
 	Feeds                 map[string]Feed // map of FeedName to Feed
 }
@@ -22,6 +23,7 @@ type FeedGenerator struct {
 func NewFeedGenerator(
 	ctx context.Context,
 	feedActorDID string,
+	serviceDID string,
 	acceptableDIDs []string,
 	serviceEndpoint string,
 ) (*FeedGenerator, error) {
@@ -33,6 +35,7 @@ func NewFeedGenerator(
 	return &FeedGenerator{
 		Feeds:                 map[string]Feed{},
 		FeedActorDID:          feedActorDID,
+		ServiceDID:            serviceDID,
 		AcceptableURIPrefixes: acceptableURIPrefixes,
 		ServiceEndpoint:       serviceEndpoint,
 	}, nil

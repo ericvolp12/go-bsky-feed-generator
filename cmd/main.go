@@ -65,7 +65,7 @@ func main() {
 	acceptableDIDs := []string{feedActorDID, serviceWebDID}
 
 	// Create a new feed generator instance
-	feedGenerator, err := feedgenerator.NewFeedGenerator(ctx, feedActorDID, acceptableDIDs, serviceEndpoint)
+	feedGenerator, err := feedgenerator.NewFeedGenerator(ctx, feedActorDID, serviceWebDID, acceptableDIDs, serviceEndpoint)
 	if err != nil {
 		log.Fatal(fmt.Errorf("error creating feed generator: %w", err))
 	}

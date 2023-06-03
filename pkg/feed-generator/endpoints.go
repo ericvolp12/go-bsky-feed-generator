@@ -15,7 +15,7 @@ import (
 func (fg *FeedGenerator) GetWellKnownDID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"@context": []string{"https://www.w3.org/ns/did/v1"},
-		"id":       fg.FeedActorDID,
+		"id":       fg.ServiceDID,
 		"service": []gin.H{
 			{
 				"id":              "#bsky_fg",
