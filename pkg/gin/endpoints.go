@@ -1,4 +1,4 @@
-package feedgenerator
+package gin
 
 import (
 	"fmt"
@@ -7,33 +7,34 @@ import (
 	"strings"
 
 	appbsky "github.com/bluesky-social/indigo/api/bsky"
+	feedgenerator "github.com/ericvolp12/go-bsky-feed-generator/pkg/feed-generator"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 )
 
-func (fg *FeedGenerator) GetWellKnownDID(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"@context": []string{"https://www.w3.org/ns/did/v1"},
-		"id":       fg.ServiceDID,
-		"service": []gin.H{
-			{
-				"id":              "#bsky_fg",
-				"type":            "BskyFeedGenerator",
-				"serviceEndpoint": fg.ServiceEndpoint,
-			},
-		},
-	})
+type Endpoints struct {
+	FeedGenerator *feedgenerator.FeedGenerator
 }
 
-func (fg *FeedGenerator) DescribeFeedGenerator(c *gin.Context) {
+func NewEndpoints(feedGenerator *feedgenerator.FeedGenerator) *Endpoints {
+	return &Endpoints{
+		FeedGenerator: feedGenerator,
+	}
+}
+
+func (ep *Endpoints) GetWellKnownDID(c *gin.Context) {
+	c.JSON(http.StatusOK, ep.FeedGenerator.DIDDocument)
+}
+
+func (ep *Endpoints) DescribeFeedGenerator(c *gin.Context) {
 	tracer := otel.Tracer("feedgenerator")
 	ctx, span := tracer.Start(c.Request.Context(), "FeedGenerator:DescribeFeedGenerator")
 	defer span.End()
 
 	feedDescriptions := []*appbsky.FeedDescribeFeedGenerator_Feed{}
 
-	for _, feed := range fg.Feeds {
+	for _, feed := range ep.FeedGenerator.Feeds {
 		feedDescription, err := feed.Describe(ctx)
 		if err != nil {
 			span.RecordError(err)
@@ -47,14 +48,14 @@ func (fg *FeedGenerator) DescribeFeedGenerator(c *gin.Context) {
 	span.SetAttributes(attribute.Int("feeds.length", len(feedDescriptions)))
 
 	feedGeneratorDescription := appbsky.FeedDescribeFeedGenerator_Output{
-		Did:   fg.FeedActorDID,
+		Did:   ep.FeedGenerator.FeedActorDID.String(),
 		Feeds: feedDescriptions,
 	}
 
 	c.JSON(http.StatusOK, feedGeneratorDescription)
 }
 
-func (fg *FeedGenerator) GetFeedSkeleton(c *gin.Context) {
+func (ep *Endpoints) GetFeedSkeleton(c *gin.Context) {
 	// Incoming requests should have a query parameter "feed" that looks like:
 	// 		at://did:web:feedsky.jazco.io/app.bsky.feed.generator/feed-name
 	// Also a query parameter "limit" that looks like: 50
@@ -77,7 +78,7 @@ func (fg *FeedGenerator) GetFeedSkeleton(c *gin.Context) {
 	span.SetAttributes(attribute.String("feed.query", feedQuery))
 
 	feedPrefix := ""
-	for _, acceptablePrefix := range fg.AcceptableURIPrefixes {
+	for _, acceptablePrefix := range ep.FeedGenerator.AcceptableURIPrefixes {
 		if strings.HasPrefix(feedQuery, acceptablePrefix) {
 			feedPrefix = acceptablePrefix
 			break
@@ -123,12 +124,12 @@ func (fg *FeedGenerator) GetFeedSkeleton(c *gin.Context) {
 	cursor := c.Query("cursor")
 	c.Set("cursor", cursor)
 
-	if fg.Feeds == nil {
+	if ep.FeedGenerator.Feeds == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "feed generator has no feeds configured"})
 		return
 	}
 
-	feed, ok := fg.Feeds[feedName]
+	feed, ok := ep.FeedGenerator.Feeds[feedName]
 	if !ok {
 		c.JSON(http.StatusNotFound, gin.H{"error": "feed not found"})
 		return

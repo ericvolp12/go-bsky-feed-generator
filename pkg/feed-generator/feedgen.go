@@ -1,9 +1,13 @@
+// Package feedgenerator describes the FeedGenerator type, which is responsible for generating feeds for a given DID.
+// It also describes the Feed interface, which is implemented by the various feed types.
 package feedgenerator
 
 import (
 	"context"
+	"fmt"
 
 	appbsky "github.com/bluesky-social/indigo/api/bsky"
+	did "github.com/whyrusleeping/go-did"
 )
 
 type Feed interface {
@@ -12,9 +16,10 @@ type Feed interface {
 }
 
 type FeedGenerator struct {
-	FeedActorDID          string          // DID of the Repo the Feed is published under
+	FeedActorDID          did.DID         // DID of the Repo the Feed is published under
 	ServiceEndpoint       string          // URL of the FeedGenerator service
-	ServiceDID            string          // DID of the FeedGenerator service
+	ServiceDID            did.DID         // DID of the FeedGenerator service
+	DIDDocument           did.Document    // DID Document of the FeedGenerator service
 	AcceptableURIPrefixes []string        // URIs that the FeedGenerator is allowed to generate feeds for
 	Feeds                 map[string]Feed // map of FeedName to Feed
 }
@@ -22,8 +27,8 @@ type FeedGenerator struct {
 // NewFeedGenerator returns a new FeedGenerator
 func NewFeedGenerator(
 	ctx context.Context,
-	feedActorDID string,
-	serviceDID string,
+	feedActorDIDString string,
+	serviceDIDString string,
 	acceptableDIDs []string,
 	serviceEndpoint string,
 ) (*FeedGenerator, error) {
@@ -32,10 +37,38 @@ func NewFeedGenerator(
 		acceptableURIPrefixes = append(acceptableURIPrefixes, "at://"+did+"/app.bsky.feed.generator/")
 	}
 
+	serviceDID, err := did.ParseDID(serviceDIDString)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing serviceDID: %w", err)
+	}
+
+	feedActorDID, err := did.ParseDID(feedActorDIDString)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing feedActorDID: %w", err)
+	}
+
+	serviceID, err := did.ParseDID("#bsky_fg")
+	if err != nil {
+		panic(err)
+	}
+
+	doc := did.Document{
+		Context: []string{"https://w3id.org/did/v1"},
+		ID:      serviceDID,
+		Service: []did.Service{
+			{
+				ID:              serviceID,
+				Type:            "FeedGenerator",
+				ServiceEndpoint: serviceEndpoint,
+			},
+		},
+	}
+
 	return &FeedGenerator{
 		Feeds:                 map[string]Feed{},
 		FeedActorDID:          feedActorDID,
 		ServiceDID:            serviceDID,
+		DIDDocument:           doc,
 		AcceptableURIPrefixes: acceptableURIPrefixes,
 		ServiceEndpoint:       serviceEndpoint,
 	}, nil

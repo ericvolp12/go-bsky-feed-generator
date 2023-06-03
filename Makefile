@@ -1,6 +1,6 @@
 # Variables
 ENV_FILE = .env
-GO_CMD = CGO_ENABLED=0 GOOS=linux go
+GO_CMD = CGO_ENABLED=1 GOOS=linux go
 
 # Build the Feedgen Go binary
 build:

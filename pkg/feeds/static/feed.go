@@ -1,4 +1,4 @@
-package staticfeed
+package static
 
 import (
 	"context"

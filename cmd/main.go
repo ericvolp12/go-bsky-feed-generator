@@ -11,8 +11,9 @@ import (
 
 	auth "github.com/ericvolp12/go-bsky-feed-generator/pkg/auth"
 	feedgenerator "github.com/ericvolp12/go-bsky-feed-generator/pkg/feed-generator"
+	ginendpoints "github.com/ericvolp12/go-bsky-feed-generator/pkg/gin"
 
-	staticfeed "github.com/ericvolp12/go-bsky-feed-generator/pkg/static-feed"
+	staticfeed "github.com/ericvolp12/go-bsky-feed-generator/pkg/feeds/static"
 	ginprometheus "github.com/ericvolp12/go-gin-prometheus"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
@@ -108,8 +109,9 @@ func main() {
 	p.Use(router)
 
 	// Add unauthenticated routes for feed generator
-	router.GET("/.well-known/did.json", feedGenerator.GetWellKnownDID)
-	router.GET("/xrpc/app.bsky.feed.describeFeedGenerator", feedGenerator.DescribeFeedGenerator)
+	ep := ginendpoints.NewEndpoints(feedGenerator)
+	router.GET("/.well-known/did.json", ep.GetWellKnownDID)
+	router.GET("/xrpc/app.bsky.feed.describeFeedGenerator", ep.DescribeFeedGenerator)
 
 	// Plug in Authentication Middleware
 	auther, err := auth.NewAuth(
@@ -126,7 +128,7 @@ func main() {
 	router.Use(auther.AuthenticateGinRequestViaJWT)
 
 	// Add authenticated routes for feed generator
-	router.GET("/xrpc/app.bsky.feed.getFeedSkeleton", feedGenerator.GetFeedSkeleton)
+	router.GET("/xrpc/app.bsky.feed.getFeedSkeleton", ep.GetFeedSkeleton)
 
 	port := os.Getenv("PORT")
 	if port == "" {
