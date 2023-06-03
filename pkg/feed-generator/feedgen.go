@@ -53,7 +53,7 @@ func NewFeedGenerator(
 	}
 
 	doc := did.Document{
-		Context: []string{"https://w3id.org/did/v1"},
+		Context: []string{did.CtxDIDv1},
 		ID:      serviceDID,
 		Service: []did.Service{
 			{
