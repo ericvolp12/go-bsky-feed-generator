@@ -107,8 +107,9 @@ func main() {
 	p := ginprometheus.NewPrometheus("gin", nil)
 	p.Use(router)
 
-	// Add routes for feed generator
+	// Add unauthenticated routes for feed generator
 	router.GET("/.well-known/did.json", feedGenerator.GetWellKnownDID)
+	router.GET("/xrpc/app.bsky.feed.describeFeedGenerator", feedGenerator.DescribeFeedGenerator)
 
 	// Plug in Authentication Middleware
 	auther, err := auth.NewAuth(
@@ -123,8 +124,9 @@ func main() {
 	}
 
 	router.Use(auther.AuthenticateGinRequestViaJWT)
+
+	// Add authenticated routes for feed generator
 	router.GET("/xrpc/app.bsky.feed.getFeedSkeleton", feedGenerator.GetFeedSkeleton)
-	router.GET("/xrpc/app.bsky.feed.describeFeedGenerator", feedGenerator.DescribeFeedGenerator)
 
 	port := os.Getenv("PORT")
 	if port == "" {

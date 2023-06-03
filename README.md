@@ -37,7 +37,11 @@ The `Feed` interface is defined by any struct implementing two functions:
 
 ``` go
 type Feed interface {
-	GetPage(ctx context.Context, limit int64, cursor string) (feedPosts []*appbsky.FeedDefs_SkeletonFeedPost, newCursor *string, err error)
+	GetPage(ctx context.Context, userDID string, limit int64, cursor string) (feedPosts []*appbsky.FeedDefs_SkeletonFeedPost, newCursor *string, err error)
 	Describe(ctx context.Context) (*appbsky.FeedDescribeFeedGenerator_Feed, error)
 }
 ```
+
+You can configure external resources and requirements in your Feed implementation before `Adding` the feed to the `FeedGenerator` with `feedGenerator.AddFeed("{feed_name}", feedInstance)`
+
+This `Feed` interface is somewhat flexible right now but it could be better. I'm not sure if it will change in the future so keep that in mind when using this template.
