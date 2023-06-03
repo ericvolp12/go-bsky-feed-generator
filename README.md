@@ -26,6 +26,11 @@ This service exposes the following routes:
   - This route is how the service advertises which feeds it supports to clients.
   - You can see how those are parsed and handled in `pkg/feed-generator/endpoints.go:DescribeFeedGenerator()`
 
+## Publishing
+
+Once you've got your feed generator up and running and have it exposed to the internet, you can publish the feed using the script from the official BSky repo [here](https://github.com/bluesky-social/feed-generator/blob/main/scripts/publishFeedGen.ts).
+
+Your feed will be published under _your_ DID and should show up in your profile under the `feeds` tab.
 
 ## Architecture
 
@@ -41,6 +46,10 @@ type Feed interface {
 	Describe(ctx context.Context) (*appbsky.FeedDescribeFeedGenerator_Feed, error)
 }
 ```
+
+`GetPage` gets a page of a feed for a given user with the limit and cursor provided, this is the main function that serves posts to a user.
+
+`Describe` is used by the generator to advertise what feeds are available, for foward compatibility, `Feed`s should be self describing in case this endpoint allows more details about feeds to be provided.
 
 You can configure external resources and requirements in your Feed implementation before `Adding` the feed to the `FeedGenerator` with `feedGenerator.AddFeed("{feed_name}", feedInstance)`
 
