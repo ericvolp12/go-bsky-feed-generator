@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  go-bsky-feed-generator:
+    build:
+      dockerfile: Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    image: go-bsky-feed-generator
+    container_name: go-bsky-feed-generator
+    environment:
+      - GIN_MODE=release
+    env_file:
+      - .env
+    ports:
+      - "9032:9032"
