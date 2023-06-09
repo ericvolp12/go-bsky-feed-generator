@@ -58,7 +58,7 @@ func NewFeedGenerator(
 		Service: []did.Service{
 			{
 				ID:              serviceID,
-				Type:            "FeedGenerator",
+				Type:            "BskyFeedGenerator",
 				ServiceEndpoint: serviceEndpoint,
 			},
 		},

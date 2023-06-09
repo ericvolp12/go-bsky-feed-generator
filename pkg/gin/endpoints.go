@@ -9,12 +9,19 @@ import (
 	appbsky "github.com/bluesky-social/indigo/api/bsky"
 	feedgenerator "github.com/ericvolp12/go-bsky-feed-generator/pkg/feed-generator"
 	"github.com/gin-gonic/gin"
+	"github.com/whyrusleeping/go-did"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 )
 
 type Endpoints struct {
 	FeedGenerator *feedgenerator.FeedGenerator
+}
+
+type DidResponse struct {
+	Context []string      `json:"@context"`
+	ID      string        `json:"id"`
+	Service []did.Service `json:"service"`
 }
 
 func NewEndpoints(feedGenerator *feedgenerator.FeedGenerator) *Endpoints {
@@ -24,7 +31,18 @@ func NewEndpoints(feedGenerator *feedgenerator.FeedGenerator) *Endpoints {
 }
 
 func (ep *Endpoints) GetWellKnownDID(c *gin.Context) {
-	c.JSON(http.StatusOK, ep.FeedGenerator.DIDDocument)
+	tracer := otel.Tracer("feedgenerator")
+	_, span := tracer.Start(c.Request.Context(), "FeedGenerator:GetWellKnownDID")
+	defer span.End()
+
+	// Use a custom struct to fix missing omitempty on did.Document
+	didResponse := DidResponse{
+		Context: ep.FeedGenerator.DIDDocument.Context,
+		ID:      ep.FeedGenerator.DIDDocument.ID.String(),
+		Service: ep.FeedGenerator.DIDDocument.Service,
+	}
+
+	c.JSON(http.StatusOK, didResponse)
 }
 
 func (ep *Endpoints) DescribeFeedGenerator(c *gin.Context) {
