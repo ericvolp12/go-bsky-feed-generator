@@ -14,15 +14,20 @@ type StaticFeed struct {
 	StaticPostURIs []string
 }
 
-func NewStaticFeed(ctx context.Context, feedActorDID string, feedName string, staticPostURIs []string) *StaticFeed {
+// NewStaticFeed returns a new StaticFeed, a list of aliases for the feed, and an error
+// StaticFeed is a trivial implementation of the Feed interface, so its aliases are just the input feedName
+func NewStaticFeed(ctx context.Context, feedActorDID string, feedName string, staticPostURIs []string) (*StaticFeed, []string, error) {
 	return &StaticFeed{
 		FeedActorDID:   feedActorDID,
 		FeedName:       feedName,
 		StaticPostURIs: staticPostURIs,
-	}
+	}, []string{feedName}, nil
 }
 
-func (sf *StaticFeed) GetPage(ctx context.Context, userDID string, limit int64, cursor string) ([]*appbsky.FeedDefs_SkeletonFeedPost, *string, error) {
+// GetPage returns a list of FeedDefs_SkeletonFeedPost, a new cursor, and an error
+// It takes a feed name, a user DID, a limit, and a cursor
+// The feed name can be used to produce different feeds from the same feed generator
+func (sf *StaticFeed) GetPage(ctx context.Context, feed string, userDID string, limit int64, cursor string) ([]*appbsky.FeedDefs_SkeletonFeedPost, *string, error) {
 	cursorAsInt := int64(0)
 	var err error
 
@@ -61,8 +66,14 @@ func (sf *StaticFeed) GetPage(ctx context.Context, userDID string, limit int64, 
 	return posts, newCursor, nil
 }
 
-func (sf *StaticFeed) Describe(ctx context.Context) (*appbsky.FeedDescribeFeedGenerator_Feed, error) {
-	return &appbsky.FeedDescribeFeedGenerator_Feed{
-		Uri: "at://" + sf.FeedActorDID + "/app.bsky.feed.generator/" + sf.FeedName,
+// Describe returns a list of FeedDescribeFeedGenerator_Feed, and an error
+// StaticFeed is a trivial implementation of the Feed interface, so it returns a single FeedDescribeFeedGenerator_Feed
+// For a more complicated feed, this function would return a list of FeedDescribeFeedGenerator_Feed with the URIs of aliases
+// supported by the feed
+func (sf *StaticFeed) Describe(ctx context.Context) ([]appbsky.FeedDescribeFeedGenerator_Feed, error) {
+	return []appbsky.FeedDescribeFeedGenerator_Feed{
+		{
+			Uri: "at://" + sf.FeedActorDID + "/app.bsky.feed.generator/" + sf.FeedName,
+		},
 	}, nil
 }

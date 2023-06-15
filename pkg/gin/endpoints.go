@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	appbsky "github.com/bluesky-social/indigo/api/bsky"
-	feedgenerator "github.com/ericvolp12/go-bsky-feed-generator/pkg/feed-generator"
+	"github.com/ericvolp12/go-bsky-feed-generator/pkg/feedrouter"
 	"github.com/gin-gonic/gin"
 	"github.com/whyrusleeping/go-did"
 	"go.opentelemetry.io/otel"
@@ -15,7 +15,7 @@ import (
 )
 
 type Endpoints struct {
-	FeedGenerator *feedgenerator.FeedGenerator
+	FeedRouter *feedrouter.FeedRouter
 }
 
 type DidResponse struct {
@@ -24,49 +24,52 @@ type DidResponse struct {
 	Service []did.Service `json:"service"`
 }
 
-func NewEndpoints(feedGenerator *feedgenerator.FeedGenerator) *Endpoints {
+func NewEndpoints(feedRouter *feedrouter.FeedRouter) *Endpoints {
 	return &Endpoints{
-		FeedGenerator: feedGenerator,
+		FeedRouter: feedRouter,
 	}
 }
 
 func (ep *Endpoints) GetWellKnownDID(c *gin.Context) {
-	tracer := otel.Tracer("feedgenerator")
-	_, span := tracer.Start(c.Request.Context(), "FeedGenerator:GetWellKnownDID")
+	tracer := otel.Tracer("feedrouter")
+	_, span := tracer.Start(c.Request.Context(), "GetWellKnownDID")
 	defer span.End()
 
 	// Use a custom struct to fix missing omitempty on did.Document
 	didResponse := DidResponse{
-		Context: ep.FeedGenerator.DIDDocument.Context,
-		ID:      ep.FeedGenerator.DIDDocument.ID.String(),
-		Service: ep.FeedGenerator.DIDDocument.Service,
+		Context: ep.FeedRouter.DIDDocument.Context,
+		ID:      ep.FeedRouter.DIDDocument.ID.String(),
+		Service: ep.FeedRouter.DIDDocument.Service,
 	}
 
 	c.JSON(http.StatusOK, didResponse)
 }
 
-func (ep *Endpoints) DescribeFeedGenerator(c *gin.Context) {
-	tracer := otel.Tracer("feedgenerator")
-	ctx, span := tracer.Start(c.Request.Context(), "FeedGenerator:DescribeFeedGenerator")
+func (ep *Endpoints) DescribeFeeds(c *gin.Context) {
+	tracer := otel.Tracer("feedrouter")
+	ctx, span := tracer.Start(c.Request.Context(), "DescribeFeeds")
 	defer span.End()
 
 	feedDescriptions := []*appbsky.FeedDescribeFeedGenerator_Feed{}
 
-	for _, feed := range ep.FeedGenerator.Feeds {
-		feedDescription, err := feed.Describe(ctx)
+	for _, feed := range ep.FeedRouter.Feeds {
+		newDescriptions, err := feed.Describe(ctx)
 		if err != nil {
 			span.RecordError(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		feedDescriptions = append(feedDescriptions, feedDescription)
+		for _, newDescription := range newDescriptions {
+			description := newDescription
+			feedDescriptions = append(feedDescriptions, &description)
+		}
 	}
 
 	span.SetAttributes(attribute.Int("feeds.length", len(feedDescriptions)))
 
 	feedGeneratorDescription := appbsky.FeedDescribeFeedGenerator_Output{
-		Did:   ep.FeedGenerator.FeedActorDID.String(),
+		Did:   ep.FeedRouter.FeedActorDID.String(),
 		Feeds: feedDescriptions,
 	}
 
@@ -96,7 +99,7 @@ func (ep *Endpoints) GetFeedSkeleton(c *gin.Context) {
 	span.SetAttributes(attribute.String("feed.query", feedQuery))
 
 	feedPrefix := ""
-	for _, acceptablePrefix := range ep.FeedGenerator.AcceptableURIPrefixes {
+	for _, acceptablePrefix := range ep.FeedRouter.AcceptableURIPrefixes {
 		if strings.HasPrefix(feedQuery, acceptablePrefix) {
 			feedPrefix = acceptablePrefix
 			break
@@ -142,24 +145,26 @@ func (ep *Endpoints) GetFeedSkeleton(c *gin.Context) {
 	cursor := c.Query("cursor")
 	c.Set("cursor", cursor)
 
-	if ep.FeedGenerator.Feeds == nil {
+	if ep.FeedRouter.FeedMap == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "feed generator has no feeds configured"})
 		return
 	}
 
-	feed, ok := ep.FeedGenerator.Feeds[feedName]
+	feed, ok := ep.FeedRouter.FeedMap[feedName]
 	if !ok {
 		c.JSON(http.StatusNotFound, gin.H{"error": "feed not found"})
 		return
 	}
 
 	// Get the feed items
-	feedItems, newCursor, err := feed.GetPage(ctx, userDID, limit, cursor)
+	feedItems, newCursor, err := feed.GetPage(ctx, feedName, userDID, limit, cursor)
 	if err != nil {
 		span.RecordError(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to get feed items: %s", err.Error())})
 		return
 	}
+
+	span.SetAttributes(attribute.Int("feed.items.length", len(feedItems)))
 
 	c.JSON(http.StatusOK, appbsky.FeedGetFeedSkeleton_Output{
 		Feed:   feedItems,

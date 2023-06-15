@@ -30,7 +30,7 @@ This service exposes the following routes:
   - You can see how those are parsed and handled in `pkg/gin/endpoints.go:GetFeedSkeleton()`
 - `/xrpc/app.bsky.feed.describeFeedGenerator`
   - This route is how the service advertises which feeds it supports to clients.
-  - You can see how those are parsed and handled in `pkg/gin/endpoints.go:DescribeFeedGenerator()`
+  - You can see how those are parsed and handled in `pkg/gin/endpoints.go:DescribeFeeds()`
 
 ## Publishing
 
@@ -40,7 +40,7 @@ Your feed will be published under _your_ DID and should show up in your profile 
 
 ## Architecture
 
-This repo is structured to abstract away a `Feed` interface that allows for you to add all sorts of feeds to the generator.
+This repo is structured to abstract away a `Feed` interface that allows for you to add all sorts of feeds to the router.
 
 These feeds can be simple static feeds like the `pkg/feeds/static/feed.go` implementation, or they can be much more complex feeds that draw on different data sources and filter them in cool ways to produce pages of feed items.
 
@@ -48,15 +48,17 @@ The `Feed` interface is defined by any struct implementing two functions:
 
 ``` go
 type Feed interface {
-	GetPage(ctx context.Context, userDID string, limit int64, cursor string) (feedPosts []*appbsky.FeedDefs_SkeletonFeedPost, newCursor *string, err error)
-	Describe(ctx context.Context) (*appbsky.FeedDescribeFeedGenerator_Feed, error)
+	GetPage(ctx context.Context, feed string, userDID string, limit int64, cursor string) (feedPosts []*appbsky.FeedDefs_SkeletonFeedPost, newCursor *string, err error)
+	Describe(ctx context.Context) ([]appbsky.FeedDescribeFeedGenerator_Feed, error)
 }
 ```
 
 `GetPage` gets a page of a feed for a given user with the limit and cursor provided, this is the main function that serves posts to a user.
 
-`Describe` is used by the generator to advertise what feeds are available, for foward compatibility, `Feed`s should be self describing in case this endpoint allows more details about feeds to be provided.
+`Describe` is used by the router to advertise what feeds are available, for foward compatibility, `Feed`s should be self describing in case this endpoint allows more details about feeds to be provided.
 
-You can configure external resources and requirements in your Feed implementation before `Adding` the feed to the `FeedGenerator` with `feedGenerator.AddFeed("{feed_name}", feedInstance)`
+You can configure external resources and requirements in your Feed implementation before `Adding` the feed to the `FeedRouter` with `feedRouter.AddFeed([]string{"{feed_name}"}, feedInstance)`
 
 This `Feed` interface is somewhat flexible right now but it could be better. I'm not sure if it will change in the future so keep that in mind when using this template.
+
+- This has since been updated to allow a Feed to take in a feed name when generating a page and register multiple aliases for feeds that are supported.

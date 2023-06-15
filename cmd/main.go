@@ -10,7 +10,7 @@ import (
 	"time"
 
 	auth "github.com/ericvolp12/go-bsky-feed-generator/pkg/auth"
-	feedgenerator "github.com/ericvolp12/go-bsky-feed-generator/pkg/feed-generator"
+	"github.com/ericvolp12/go-bsky-feed-generator/pkg/feedrouter"
 	ginendpoints "github.com/ericvolp12/go-bsky-feed-generator/pkg/gin"
 
 	staticfeed "github.com/ericvolp12/go-bsky-feed-generator/pkg/feeds/static"
@@ -68,19 +68,19 @@ func main() {
 
 	acceptableDIDs := []string{feedActorDID, serviceWebDID}
 
-	// Create a new feed generator instance
-	feedGenerator, err := feedgenerator.NewFeedGenerator(ctx, feedActorDID, serviceWebDID, acceptableDIDs, serviceEndpoint)
+	// Create a new feed router instance
+	feedRouter, err := feedrouter.NewFeedRouter(ctx, feedActorDID, serviceWebDID, acceptableDIDs, serviceEndpoint)
 	if err != nil {
-		log.Fatal(fmt.Errorf("error creating feed generator: %w", err))
+		log.Fatal(fmt.Errorf("error creating feed router: %w", err))
 	}
 
-	// Here we can add feeds to the Feed Generator instance
+	// Here we can add feeds to the Feed Router instance
 	// Feeds conform to the Feed interface, which is defined in
-	// pkg/feed-generator/feedgen.go
+	// pkg/feedrouter/feedrouter.go
 
 	// For demonstration purposes, we'll use a static feed generator
 	// that will always return the same feed skeleton (one post)
-	staticFeed := staticfeed.NewStaticFeed(
+	staticFeed, staticFeedAliases, err := staticfeed.NewStaticFeed(
 		ctx,
 		feedActorDID,
 		"static",
@@ -89,7 +89,7 @@ func main() {
 	)
 
 	// Add the static feed to the feed generator
-	feedGenerator.AddFeed("static", staticFeed)
+	feedRouter.AddFeed(staticFeedAliases, staticFeed)
 
 	// Create a gin router with default middleware for logging and recovery
 	router := gin.Default()
@@ -109,9 +109,9 @@ func main() {
 	p.Use(router)
 
 	// Add unauthenticated routes for feed generator
-	ep := ginendpoints.NewEndpoints(feedGenerator)
+	ep := ginendpoints.NewEndpoints(feedRouter)
 	router.GET("/.well-known/did.json", ep.GetWellKnownDID)
-	router.GET("/xrpc/app.bsky.feed.describeFeedGenerator", ep.DescribeFeedGenerator)
+	router.GET("/xrpc/app.bsky.feed.describeFeedGenerator", ep.DescribeFeeds)
 
 	// Plug in Authentication Middleware
 	auther, err := auth.NewAuth(
